@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace BookHelper
 {
@@ -21,19 +23,21 @@ namespace BookHelper
         public int HowManyPagesLeft()
         {
             // TODO 3: Improve/fix the code here.
-            var readPages = 0;
-            for (var page = 1; page <= PagesCount; page++)
+
+            if (!_readPages.Any())
             {
-                foreach (var range in _readPages)
-                {
-                    if (page >= range.From && page <= range.To)
-                    {
-                        readPages++;
-                    }
-                }
+                return 0;
             }
 
-            var leftPages = PagesCount - readPages;
+            var arrayOfPage = new bool[PagesCount];
+            foreach (var range in _readPages)
+            {
+                for (int i = range.From; i <= range.To; i++)
+                {
+                    arrayOfPage[i-1] = true;
+                }
+            }
+            var leftPages = PagesCount - arrayOfPage.Where(item => item == true).Count();
             return leftPages;
         }
     }
