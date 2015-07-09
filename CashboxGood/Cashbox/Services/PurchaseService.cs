@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows.Documents;
 using Cashbox.DataAccess;
 using Cashbox.Models;
 using Cashbox.ViewModels;
@@ -20,7 +21,7 @@ namespace Cashbox.Services
         {
             _unitOfWorkFactory = unitOfWorkFactory;
         }
-
+        
         public decimal GetOrdersHistoryTotal(int accountId)
         {
             // Calculate how much account has spent before.
@@ -72,6 +73,10 @@ namespace Cashbox.Services
         {
             using (var uow = _unitOfWorkFactory.Create())
             {
+                // Check if selected any products.
+                if(!productIds.Any())
+                    throw new PurchaseException(PurchaseError.NotEnoughAmount, "Not selected any item");
+
                 // Get account entity from the database in order to update it.
                 var account = uow.Repository<Account>().Get(accountId);
 
@@ -88,7 +93,7 @@ namespace Cashbox.Services
                 {
                     product.Amount--;
                 }
-
+                account.Balance -= total;
                 uow.SaveChanges();
             }
         }

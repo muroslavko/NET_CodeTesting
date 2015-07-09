@@ -87,18 +87,46 @@ namespace Cashbox.Tests.Services
 
         // TODO 4: Write test to check that account can get 5% discount (for the selected expensive products). Fix code if test fails.
 
+        [Test]
+        public void
+            GetDiscount_When_account_has_selected_expensive_product_Then_orders_history_discount()
+        {
+            // Arrange
+            var service = new PurchaseService(_fakeUnitOfWorkFactory);
+
+            // Act
+            var discount = service.GetDiscount(2, 220.5m);
+
+            // Assert
+            Assert.That(discount, Is.EqualTo(PurchaseService.EXPENSIVE_PRODUCTS_DISCOUNT));
+        }
+
         // TODO 5: Write test to check that account can get 15% discount (10% + 5%, for previous orders and for selected products). Fix code if test fails.
+        [Test]
+        public void
+            GetDiscount_When_account_has_enough_orders_and_selected_expensive_product_Then_orders_history_discount()
+        {
+            // Arrange
+            var service = new PurchaseService(_fakeUnitOfWorkFactory);
+
+            // Act
+            var discount = service.GetDiscount(1, 200.5m);
+
+            // Assert
+            Assert.That(discount, Is.EqualTo(PurchaseService.EXPENSIVE_PRODUCTS_DISCOUNT+PurchaseService.ORDERS_HISTORY_DISCOUNT));
+        }
+
 
         [Test]
         public void Purchase_When_not_enough_balance_Then_throw_exception()
         {
             // Assert
             var service = new PurchaseService(_fakeUnitOfWorkFactory);
-
             // Act and Assert
-            Assert.Throws<PurchaseException>(() => service.Purchase(1, Enumerable.Empty<int>(), 200.50m));
+            Assert.Throws<PurchaseException>(() => service.Purchase(1, new[] {1}, 200.50m));
+            //Change Enumerable.Empty<int>() ---> new[] {1} 
         }
-
+        
         // Example with fake objects created using the FakeItEasy.
         [Test]
         public void Purchase_When_purchase_products_Then_products_amount_correctly_updated()
@@ -166,6 +194,49 @@ namespace Cashbox.Tests.Services
 
         // TODO 6: Write test to check that account balance is correctly updated after purchase. Fix code if test fails.
 
+        [Test]
+        public void Purchase_When_purchase_Then_balance_change_correctly_updated()
+        {
+            // Arrange
+            var product1 = new Product { Id = 1, Price = 1, Amount = 5 };
+            var product2 = new Product { Id = 2, Price = 2, Amount = 10 };
+            var product3 = new Product { Id = 3, Price = 3, Amount = 7 };
+
+            var productRepository = A.Fake<IRepository<Product>>();
+            A.CallTo(() => productRepository.Query()).Returns(new[] { product1, product2, product3 }.AsQueryable());
+
+            var account = new Account { Id = 1, Balance = 10 };
+
+            var accountRepository = A.Fake<IRepository<Account>>();
+            A.CallTo(() => accountRepository.Get(A<int>._)).Returns(account);
+
+            var unitOfWork = A.Fake<IUnitOfWork>();
+            A.CallTo(() => unitOfWork.Repository<Product>()).Returns(productRepository);
+            A.CallTo(() => unitOfWork.Repository<Account>()).Returns(accountRepository);
+
+            var unitOfWorkFactory = A.Fake<IUnitOfWorkFactory>();
+            A.CallTo(() => unitOfWorkFactory.Create()).Returns(unitOfWork);
+
+            var service = new PurchaseService(unitOfWorkFactory);
+
+            // Act
+            service.Purchase(account.Id, new[] { product1.Id, product2.Id }, product1.Price + product2.Price);
+
+            // Assert
+            Assert.That(account.Balance, Is.EqualTo(7m));
+        }
+
+
         // TODO 7: Write test to check that account can't buy product if it's amount is 0. Purchase should throw an exception. Fix code if test fails.
+        [Test]
+        public void Purchase_When_not_selected_any_product_Then_throw_exception()
+        {
+            // Assert
+            var service = new PurchaseService(_fakeUnitOfWorkFactory);
+
+            // Act and Assert
+            Assert.Throws<PurchaseException>(() => service.Purchase(2, Enumerable.Empty<int>(), 200.50m));
+        }
+
     }
 }
